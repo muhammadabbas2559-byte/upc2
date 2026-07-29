@@ -354,6 +354,38 @@ export async function mutate<T>(fn: (db: Database) => T): Promise<T> {
   return result;
 }
 
+/**
+ * Ensure the superuser session exists before creating a user. This also
+ * supports the login-screen "New User" flow, where the superuser has not
+ * opened a session yet but supplies their password for authorization.
+ */
+async function ensureSuperuserSession(suPassword: string): Promise<void> {
+  if (_db && _currentUser && _masterKey) return;
+
+  const meta = readMeta();
+  const superuser = meta.publicUsers.find((u) => u.role === "superuser");
+  if (!superuser) throw new Error("Superuser account not found");
+  const wrapped = readKeychain()[superuser.id];
+  if (!wrapped) throw new Error("No wrapped key for superuser");
+
+  let masterKey: Uint8Array;
+  try {
+    masterKey = await unwrapMasterKey(wrapped, suPassword);
+  } catch {
+    throw new Error("Superuser authorization failed");
+  }
+  const ciphertext = await readCiphertextAny();
+  if (!ciphertext) throw new Error("Database not found or all copies corrupt");
+  const unlocked = await decryptWithMasterKey(ciphertext, masterKey);
+  const user = unlocked.users.find((u) => u.id === superuser.id);
+  if (!user || !(await verifyPassword(suPassword, user.passwordHash))) {
+    throw new Error("Superuser authorization failed");
+  }
+  _db = unlocked;
+  _masterKey = masterKey;
+  _currentUser = user;
+}
+
 /** Create an ordinary user: superuser-only. Adds wrapped master key. */
 export async function createUser(
   username: string,
@@ -361,6 +393,7 @@ export async function createUser(
   displayName: string,
   suPassword: string
 ): Promise<User> {
+  await ensureSuperuserSession(suPassword);
   if (!_db || !_currentUser || !_masterKey) throw new Error("Not authenticated");
   if (_currentUser.role !== "superuser")
     throw new Error("Only the superuser can create users");
