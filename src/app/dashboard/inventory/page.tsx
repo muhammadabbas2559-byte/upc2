@@ -16,6 +16,7 @@ export default function InventoryPage() {
   const [form, setForm] = useState({
     name: "",
     description: "",
+    image: "",
     category: "supplements",
     stockQty: 0,
     lowStockThreshold: 3,
@@ -32,6 +33,7 @@ export default function InventoryPage() {
     setForm({
       name: "",
       description: "",
+      image: "",
       category: "supplements",
       stockQty: 0,
       lowStockThreshold: 3,
@@ -53,6 +55,7 @@ export default function InventoryPage() {
     setForm({
       name: it.name,
       description: it.description || "",
+      image: it.image || "",
       category: it.category || "",
       stockQty: it.stockQty,
       lowStockThreshold: it.lowStockThreshold,
@@ -63,6 +66,20 @@ export default function InventoryPage() {
     });
     setEditId(id);
     setShowNew(true);
+  }
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 2 * 1024 * 1024) {
+      window.alert("Please choose an image smaller than 2 MB.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm((current) => ({ ...current, image: String(reader.result) }));
+    reader.readAsDataURL(file);
   }
 
   async function submit(e: React.FormEvent) {
@@ -118,10 +135,19 @@ export default function InventoryPage() {
                   return (
                     <tr key={i.id}>
                       <td>
-                        <div className="font-semibold">{i.name}</div>
-                        {i.description && (
-                          <div className="text-xs text-muted">{i.description}</div>
-                        )}
+                        <div className="flex items-center gap-3">
+                          {i.image ? (
+                            <img src={i.image} alt="" className="h-10 w-10 rounded-lg object-cover border border-app" />
+                          ) : (
+                            <div className="h-10 w-10 rounded-lg bg-surface-2 border border-app flex items-center justify-center">📦</div>
+                          )}
+                          <div>
+                            <div className="font-semibold">{i.name}</div>
+                            {i.description && (
+                              <div className="text-xs text-muted">{i.description}</div>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="text-muted text-sm">{i.category || "—"}</td>
                       <td>
@@ -184,6 +210,18 @@ export default function InventoryPage() {
             <div className="col-span-2">
               <Label>Name</Label>
               <Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="col-span-2">
+              <Label>Item Image (optional)</Label>
+              <Input type="file" accept="image/*" onChange={handleImageChange} />
+              {form.image && (
+                <div className="mt-3 flex items-center gap-3">
+                  <img src={form.image} alt="Item preview" className="h-16 w-16 rounded-lg object-cover border border-app" />
+                  <button type="button" className="text-xs text-danger" onClick={() => setForm({ ...form, image: "" })}>
+                    Remove image
+                  </button>
+                </div>
+              )}
             </div>
             <div className="col-span-2">
               <Label>Description</Label>

@@ -56,6 +56,7 @@ export interface InventoryItem {
   id: string;
   name: string;
   description?: string;
+  image?: string;
   category?: string;
   stockQty: number;
   lowStockThreshold: number;
