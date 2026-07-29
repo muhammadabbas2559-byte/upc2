@@ -177,12 +177,16 @@ export default function FinancesPage() {
                         outerRadius={90}
                         innerRadius={40}
                         paddingAngle={3}
-                        label={(entry) => entry.name}
                       >
                         {pieData.map((_, i) => (
                           <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} stroke="#0d0d0d" strokeWidth={2} />
                         ))}
                       </Pie>
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        wrapperStyle={{ fontSize: 11, color: "#a0a0a0" }}
+                      />
                       <Tooltip
                         contentStyle={{ background: "#171717", border: "1px solid #3a3a3a", borderRadius: 8 }}
                         formatter={(v) => formatPKR(Number(v))}

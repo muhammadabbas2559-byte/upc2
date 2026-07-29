@@ -45,6 +45,9 @@ export function summarize(db: Database): FinanceSummary {
   let expensesThisMonth = 0;
 
   const bucket: Record<string, { income: number; expenses: number }> = {};
+  // Expenses are written to both `expenses` and `transactions` for history.
+  // Keep the IDs so they are counted once in the P&L.
+  const expenseIds = new Set(db.expenses.map((expense) => expense.id));
   const categoryTotals: Record<string, number> = {};
 
   const ensureBucket = (mk: string) => {
@@ -54,12 +57,13 @@ export function summarize(db: Database): FinanceSummary {
 
   for (const t of db.transactions) {
     if (t.type === "expense") {
+      // addExpense stores a matching transaction and expense record. The
+      // dedicated expense record is authoritative, so skip its transaction.
+      if (expenseIds.has(t.id)) continue;
       totalExpenses += Math.abs(t.amount);
       const mk = monthKey(t.createdAt);
       ensureBucket(mk).expenses += Math.abs(t.amount);
       if (mk === thisMonth) expensesThisMonth += Math.abs(t.amount);
-      const cat = t.expenseCategory || "Uncategorized";
-      categoryTotals[cat] = (categoryTotals[cat] || 0) + Math.abs(t.amount);
     } else {
       totalRevenue += Math.max(0, t.amount);
       const mk = monthKey(t.createdAt);
@@ -74,7 +78,6 @@ export function summarize(db: Database): FinanceSummary {
     const mk = monthKey(e.date);
     ensureBucket(mk).expenses += e.amount;
     if (mk === thisMonth) expensesThisMonth += e.amount;
-    categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   }
 
   // Attendance today
