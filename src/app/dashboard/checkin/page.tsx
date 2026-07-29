@@ -111,7 +111,18 @@ export default function CheckInPage() {
                 {results.map((m) => {
                   const plan = m.subscriptionId ? db.plans.find((p) => p.id === m.subscriptionId) : null;
                   const days = daysUntil(m.subscriptionEnd);
-                  const canCheckin = m.status !== "expired" && m.status !== "frozen";
+                  const lastCheckIn = db.attendance
+                    .filter((attendance) => attendance.memberId === m.id)
+                    .sort((a, b) => new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime())[0];
+                  const cooldownMs = 12 * 60 * 60 * 1000;
+                  const cooldownRemaining = lastCheckIn
+                    ? cooldownMs - (Date.now() - new Date(lastCheckIn.checkedInAt).getTime())
+                    : 0;
+                  const inCooldown = cooldownRemaining > 0;
+                  const canCheckin = m.status !== "expired" && m.status !== "frozen" && !inCooldown;
+                  const cooldownLabel = inCooldown
+                    ? ` · available in ${Math.ceil(cooldownRemaining / 3_600_000)}h`
+                    : "";
                   return (
                     <div
                       key={m.id}
@@ -132,6 +143,7 @@ export default function CheckInPage() {
                           {m.uid} · {plan?.name || "No plan"}
                           {m.status === "pending" && ` · ${days}d left`}
                           {m.status === "frozen" && " · frozen"}
+                          {cooldownLabel}
                         </div>
                       </div>
                       <Button

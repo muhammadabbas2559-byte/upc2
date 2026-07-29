@@ -13,6 +13,7 @@ import type {
   Expense,
 } from "@/lib/schema";
 import { useAuth } from "./AuthContext";
+import { generateMemberUid } from "@/lib/utils";
 
 interface DataContextValue {
   db: Database | null;
@@ -162,9 +163,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // ------------ MUTATIONS ------------
   const addMember: DataContextValue["addMember"] = async (input) => {
+    const existingIds = new Set(db.getDb().members.map((member) => member.uid));
+    let uid = generateMemberUid();
+    while (existingIds.has(uid)) uid = generateMemberUid();
+
     const newMember: Member = {
       id: Math.random().toString(36).slice(2),
-      uid: "GF-" + Math.floor(Math.random() * 36 ** 7).toString(36).toUpperCase().padStart(7, "0"),
+      uid,
       fullName: input.fullName,
       cnic: input.cnic,
       phone: input.phone,
@@ -245,6 +250,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const member = d.members.find((m) => m.id === memberId);
     if (!member) throw new Error("Member not found");
     if (member.status === "expired") throw new Error("Membership is expired");
+    if (member.status === "frozen") throw new Error("Membership is frozen");
+
+    const cooldownMs = 12 * 60 * 60 * 1000;
+    const lastCheckIn = d.attendance
+      .filter((attendance) => attendance.memberId === memberId)
+      .sort((a, b) => new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime())[0];
+    if (lastCheckIn) {
+      const elapsed = Date.now() - new Date(lastCheckIn.checkedInAt).getTime();
+      if (elapsed < cooldownMs) {
+        const remainingMinutes = Math.ceil((cooldownMs - elapsed) / 60_000);
+        const hours = Math.floor(remainingMinutes / 60);
+        const minutes = remainingMinutes % 60;
+        const wait = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        throw new Error(`Check-in cooldown active. Try again in ${wait}.`);
+      }
+    }
+
     const record: AttendanceRecord = {
       id: Math.random().toString(36).slice(2),
       memberId,

@@ -51,10 +51,9 @@ export function relativeTime(iso: string): string {
   return formatDate(iso);
 }
 
-/** Simple base-36 UID for members. */
+/** Six-digit numeric member ID printed on the member card. */
 export function generateMemberUid(): string {
-  const n = Math.floor(Math.random() * 36 ** 7).toString(36).toUpperCase().padStart(7, "0");
-  return "GF-" + n;
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 /** Generate a QR code data URL via the `qrcode` library. */

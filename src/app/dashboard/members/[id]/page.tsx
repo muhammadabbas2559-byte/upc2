@@ -25,6 +25,57 @@ import { useAuth } from "@/context/AuthContext";
 import { can } from "@/lib/rbac";
 import { logAction } from "@/lib/logger";
 
+async function downloadMemberIdCard(member: {
+  fullName: string;
+  joinDate: string;
+  phone: string;
+  uid: string;
+}, qrUrl: string) {
+  const qr = new Image();
+  await new Promise<void>((resolve, reject) => {
+    qr.onload = () => resolve();
+    qr.onerror = () => reject(new Error("Unable to prepare QR code"));
+    qr.src = qrUrl;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 720;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.fillStyle = "#0d0d0d";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#ff6b00";
+  ctx.fillRect(0, 0, canvas.width, 14);
+  ctx.fillStyle = "#171717";
+  ctx.roundRect(36, 42, canvas.width - 72, canvas.height - 84, 28);
+  ctx.fill();
+
+  ctx.fillStyle = "#ff6b00";
+  ctx.font = "700 28px system-ui, sans-serif";
+  ctx.fillText("OBSIDIAN GYM MANAGER", 78, 105);
+  ctx.fillStyle = "#f5f5f5";
+  ctx.font = "800 52px system-ui, sans-serif";
+  ctx.fillText(member.fullName, 78, 220);
+  ctx.fillStyle = "#a7a7a7";
+  ctx.font = "24px system-ui, sans-serif";
+  ctx.fillText(`Joined: ${formatDate(member.joinDate)}`, 78, 290);
+  ctx.fillText(`Phone: ${member.phone}`, 78, 345);
+  ctx.fillStyle = "#ff6b00";
+  ctx.font = "800 34px monospace";
+  ctx.fillText(`ID: ${member.uid}`, 78, 435);
+  ctx.fillStyle = "#a7a7a7";
+  ctx.font = "20px system-ui, sans-serif";
+  ctx.fillText("Present this card at the check-in desk", 78, 520);
+  ctx.drawImage(qr, 850, 150, 260, 260);
+
+  const link = document.createElement("a");
+  link.download = `${member.uid}-id-card.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+}
+
 export default function MemberProfilePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -674,14 +725,9 @@ export default function MemberProfilePage() {
               <p className="text-xs font-mono text-muted mt-3">gym://checkin/{m.uid}</p>
               <Button
                 className="mt-4"
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = qrUrl;
-                  a.download = `${m.uid}-qr.png`;
-                  a.click();
-                }}
+                onClick={() => downloadMemberIdCard(m, qrUrl)}
               >
-                Download ID card QR
+                Download ID Card
               </Button>
             </>
           )}
