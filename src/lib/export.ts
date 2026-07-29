@@ -15,9 +15,15 @@ import {
   AlignmentType,
   WidthType,
 } from "docx";
-import { formatPKR, formatDate } from "./utils";
+import { formatDate } from "./utils";
 import type { Database } from "./schema";
 import { summarize } from "./finance";
+
+// jsPDF's built-in Helvetica font cannot reliably render the Unicode rupee
+// glyph. Keep exports ASCII-safe so downloaded reports remain readable.
+function formatExportPKR(value: number): string {
+  return `PKR ${Math.round(value).toLocaleString("en-US")}`;
+}
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -60,12 +66,12 @@ export async function exportFinancePdf(db: Database): Promise<void> {
 
   line("Key Metrics", true, 14, [255, 107, 0]);
   y += 4;
-  line(`Total Revenue:        ${formatPKR(s.totalRevenue)}`);
-  line(`Total Expenses:       ${formatPKR(s.totalExpenses)}`);
-  line(`Net Profit / Loss:    ${formatPKR(s.netProfit)}`, true, 10, s.netProfit >= 0 ? [0, 120, 40] : [200, 30, 30]);
-  line(`This Month Revenue:   ${formatPKR(s.revenueThisMonth)}`);
-  line(`This Month Expenses:  ${formatPKR(s.expensesThisMonth)}`);
-  line(`This Month P/L:       ${formatPKR(s.profitThisMonth)}`);
+  line(`Total Revenue:        ${formatExportPKR(s.totalRevenue)}`);
+  line(`Total Expenses:       ${formatExportPKR(s.totalExpenses)}`);
+  line(`Net Profit / Loss:    ${formatExportPKR(s.netProfit)}`, true, 10, s.netProfit >= 0 ? [0, 120, 40] : [200, 30, 30]);
+  line(`This Month Revenue:   ${formatExportPKR(s.revenueThisMonth)}`);
+  line(`This Month Expenses:  ${formatExportPKR(s.expensesThisMonth)}`);
+  line(`This Month P/L:       ${formatExportPKR(s.profitThisMonth)}`);
   y += 12;
 
   line("Monthly Breakdown", true, 14, [255, 107, 0]);
@@ -84,10 +90,10 @@ export async function exportFinancePdf(db: Database): Promise<void> {
   doc.setFont("helvetica", "normal");
   for (const m of s.monthly) {
     doc.text(m.label, 50, y);
-    doc.text(formatPKR(m.income), 200, y);
-    doc.text(formatPKR(m.expenses), 320, y);
+    doc.text(formatExportPKR(m.income), 200, y);
+    doc.text(formatExportPKR(m.expenses), 320, y);
     doc.setTextColor(m.profit >= 0 ? 0 : 200, m.profit >= 0 ? 120 : 30, m.profit >= 0 ? 40 : 30);
-    doc.text(formatPKR(m.profit), 440, y);
+    doc.text(formatExportPKR(m.profit), 440, y);
     doc.setTextColor(20, 20, 20);
     y += 16;
     if (y > 760) {
@@ -123,7 +129,7 @@ export async function exportFinanceDocx(db: Database): Promise<void> {
   for (const m of s.monthly) {
     rows.push(
       new TableRow({
-        children: [m.label, formatPKR(m.income), formatPKR(m.expenses), formatPKR(m.profit)].map(
+        children: [m.label, formatExportPKR(m.income), formatExportPKR(m.expenses), formatExportPKR(m.profit)].map(
           (v) => new TableCell({ children: [new Paragraph(v)] })
         ),
       })
@@ -161,20 +167,20 @@ export async function exportFinanceDocx(db: Database): Promise<void> {
           new Paragraph({
             children: [new TextRun({ text: "Key Metrics", bold: true, color: "FF6B00", size: 28 })],
           }),
-          new Paragraph({ text: `Total Revenue: ${formatPKR(s.totalRevenue)}` }),
-          new Paragraph({ text: `Total Expenses: ${formatPKR(s.totalExpenses)}` }),
+          new Paragraph({ text: `Total Revenue: ${formatExportPKR(s.totalRevenue)}` }),
+          new Paragraph({ text: `Total Expenses: ${formatExportPKR(s.totalExpenses)}` }),
           new Paragraph({
             children: [
               new TextRun({
-                text: `Net Profit/Loss: ${formatPKR(s.netProfit)}`,
+                text: `Net Profit/Loss: ${formatExportPKR(s.netProfit)}`,
                 bold: true,
                 color: s.netProfit >= 0 ? "33CC33" : "E03C3C",
               }),
             ],
           }),
-          new Paragraph({ text: `This Month Revenue: ${formatPKR(s.revenueThisMonth)}` }),
-          new Paragraph({ text: `This Month Expenses: ${formatPKR(s.expensesThisMonth)}` }),
-          new Paragraph({ text: `This Month P/L: ${formatPKR(s.profitThisMonth)}` }),
+          new Paragraph({ text: `This Month Revenue: ${formatExportPKR(s.revenueThisMonth)}` }),
+          new Paragraph({ text: `This Month Expenses: ${formatExportPKR(s.expensesThisMonth)}` }),
+          new Paragraph({ text: `This Month P/L: ${formatExportPKR(s.profitThisMonth)}` }),
           new Paragraph({ text: "" }),
           new Paragraph({
             children: [new TextRun({ text: "Monthly Breakdown", bold: true, color: "FF6B00", size: 28 })],
