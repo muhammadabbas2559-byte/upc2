@@ -53,6 +53,7 @@ export default function MemberProfilePage() {
   const [selectedItemId, setSelectedItemId] = useState("");
   const [itemQty, setItemQty] = useState(1);
   const [itemPaidWithTokens, setItemPaidWithTokens] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
 
@@ -96,39 +97,49 @@ export default function MemberProfilePage() {
 
   async function assignPlan() {
     if (!selectedPlanId) return;
-    await recordPurchase({
-      type: "membership_purchase",
-      memberId: m.id,
-      planId: selectedPlanId,
-      paidWithTokens: planPaidWithTokens,
-    });
-    logAction("member.assign_plan", { memberId: m.id, planId: selectedPlanId });
-    setShowPlanModal(false);
-    setSelectedPlanId("");
-    setPlanPaidWithTokens(false);
+    setActionError(null);
+    try {
+      await recordPurchase({
+        type: "membership_purchase",
+        memberId: m.id,
+        planId: selectedPlanId,
+        paidWithTokens: planPaidWithTokens,
+      });
+      logAction("member.assign_plan", { memberId: m.id, planId: selectedPlanId });
+      setShowPlanModal(false);
+      setSelectedPlanId("");
+      setPlanPaidWithTokens(false);
+    } catch (err) {
+      setActionError((err as Error).message);
+    }
   }
 
   async function buyItem() {
     if (!selectedItemId) return;
     const item = d.inventory.find((i) => i.id === selectedItemId);
     if (!item) return;
-    if (itemPaidWithTokens && item.isRedeemable) {
-      await redeemItemWithTokens(m.id, item.id, itemQty);
-      logAction("member.redeem_item", { memberId: m.id, itemId: item.id });
-    } else {
-      await recordPurchase({
-        type: "item_purchase",
-        memberId: m.id,
-        itemId: selectedItemId,
-        quantity: itemQty,
-        paidWithTokens: false,
-      });
-      logAction("member.buy_item", { memberId: m.id, itemId: item.id });
+    setActionError(null);
+    try {
+      if (itemPaidWithTokens && item.isRedeemable) {
+        await redeemItemWithTokens(m.id, item.id, itemQty);
+        logAction("member.redeem_item", { memberId: m.id, itemId: item.id });
+      } else {
+        await recordPurchase({
+          type: "item_purchase",
+          memberId: m.id,
+          itemId: selectedItemId,
+          quantity: itemQty,
+          paidWithTokens: false,
+        });
+        logAction("member.buy_item", { memberId: m.id, itemId: item.id });
+      }
+      setShowItemModal(false);
+      setSelectedItemId("");
+      setItemQty(1);
+      setItemPaidWithTokens(false);
+    } catch (err) {
+      setActionError((err as Error).message);
     }
-    setShowItemModal(false);
-    setSelectedItemId("");
-    setItemQty(1);
-    setItemPaidWithTokens(false);
   }
 
   async function doCheckIn() {
@@ -464,6 +475,11 @@ export default function MemberProfilePage() {
         }
       >
         <div className="space-y-4">
+          {actionError && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+              {actionError}
+            </div>
+          )}
           <div>
             <Label>Select Plan</Label>
             <Select value={selectedPlanId} onChange={(e) => setSelectedPlanId(e.target.value)}>
@@ -539,6 +555,11 @@ export default function MemberProfilePage() {
         }
       >
         <div className="space-y-4">
+          {actionError && (
+            <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+              {actionError}
+            </div>
+          )}
           <div>
             <Label>Item</Label>
             <Select value={selectedItemId} onChange={(e) => setSelectedItemId(e.target.value)}>
