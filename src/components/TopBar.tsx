@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
 import { Button } from "@/components/ui";
@@ -8,17 +9,24 @@ import { can } from "@/lib/rbac";
 import { logAction } from "@/lib/logger";
 
 export default function TopBar() {
+  const router = useRouter();
   const { currentUser, publicUsers, switchUser, logout } = useAuth();
   const { db, markNotificationRead, dismissNotification } = useData();
+  const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [suPwd, setSuPwd] = useState("");
   const [switchError, setSwitchError] = useState<string | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const switchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node))
+        setSearchOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node))
         setNotifOpen(false);
       if (switchRef.current && !switchRef.current.contains(e.target as Node)) {
@@ -31,7 +39,49 @@ export default function TopBar() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  useEffect(() => {
+    function onShortcut(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape") setSearchOpen(false);
+    }
+    document.addEventListener("keydown", onShortcut);
+    return () => document.removeEventListener("keydown", onShortcut);
+  }, []);
+
   const unread = (db?.notifications || []).filter((n) => !n.read).length;
+  const term = search.trim().toLowerCase();
+  const searchResults = term
+    ? [
+        ...(db?.members ?? [])
+          .filter((m) =>
+            [m.fullName, m.uid, m.phone, m.email].some((value) =>
+              value?.toLowerCase().includes(term)
+            )
+          )
+          .map((m) => ({
+            type: "Member",
+            title: m.fullName,
+            detail: `${m.uid} · ${m.phone}`,
+            href: `/dashboard/members/${m.id}`,
+          })),
+        ...(db?.inventory ?? [])
+          .filter((item) =>
+            [item.name, item.category].some((value) =>
+              value?.toLowerCase().includes(term)
+            )
+          )
+          .map((item) => ({
+            type: "Inventory",
+            title: item.name,
+            detail: `${item.stockQty} in stock${item.category ? ` · ${item.category}` : ""}`, 
+            href: "/dashboard/inventory",
+          })),
+      ].slice(0, 8)
+    : [];
 
   async function handleSwitch(userId: string, isSu: boolean) {
     try {
@@ -55,10 +105,50 @@ export default function TopBar() {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Quick search placeholder for future */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-2 border border-app w-72">
-          <span className="text-dim text-sm">🔍 Search members, items...</span>
-          <span className="kbd ml-auto">⌘K</span>
+        {/* Global member and inventory search */}
+        <div ref={searchRef} className="relative hidden md:block w-72">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-2 border border-app focus-within:border-[var(--accent)]">
+            <span className="text-dim">🔍</span>
+            <input
+              ref={searchInputRef}
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setSearchOpen(true);
+              }}
+              onFocus={() => setSearchOpen(true)}
+              placeholder="Search members, items..."
+              aria-label="Search members and inventory"
+              className="min-w-0 flex-1 bg-transparent outline-none text-sm text-primary placeholder:text-dim"
+            />
+            <span className="kbd">⌘K</span>
+          </div>
+          {searchOpen && search && (
+            <div className="absolute left-0 right-0 top-12 bg-surface border border-strong rounded-xl shadow-2xl p-2 z-50">
+              {searchResults.length > 0 ? (
+                searchResults.map((result) => (
+                  <button
+                    key={`${result.type}-${result.href}-${result.title}`}
+                    type="button"
+                    onClick={() => {
+                      router.push(result.href);
+                      setSearch("");
+                      setSearchOpen(false);
+                    }}
+                    className="w-full text-left p-2 rounded-lg hover:bg-surface-3 transition"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-sm truncate">{result.title}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-accent">{result.type}</span>
+                    </div>
+                    <div className="text-xs text-muted truncate">{result.detail}</div>
+                  </button>
+                ))
+              ) : (
+                <div className="p-3 text-sm text-muted">No members or inventory items found.</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Notifications */}
