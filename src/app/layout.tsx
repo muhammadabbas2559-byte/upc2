@@ -3,7 +3,7 @@ import AppProviders from "@/components/AppProviders";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "IronForge Gym — Offline Management System",
+  title: "Obsidian Gym Manager — Offline Management System",
   description:
     "Offline-first, encrypted, role-based gym management platform",
 };

@@ -188,7 +188,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           id: Math.random().toString(36).slice(2),
           type: "milestone",
           title: "Welcome to the Pack",
-          description: "Joined IronForge Gym",
+          description: "Joined Obsidian Gym Manager",
           icon: "🎉",
           awardedAt: new Date().toISOString(),
         },

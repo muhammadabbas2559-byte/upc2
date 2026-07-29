@@ -5,6 +5,7 @@ import { can } from "@/lib/rbac";
 import { useAuth } from "@/context/AuthContext";
 import { useData } from "@/context/DataContext";
 import { cn } from "@/lib/utils";
+import BrandMark from "@/components/BrandMark";
 
 const Icon = ({ path }: { path: string }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -44,15 +45,13 @@ export default function Sidebar() {
       <div className="p-5 border-b border-app">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white"
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{ background: "var(--accent)" }}
           >
-            IF
+            <BrandMark size={34} />
           </div>
           <div>
-            <div className="font-black tracking-tight leading-none">
-              {db?.settings.gymName || "IronForge"}
-            </div>
+            <div className="font-black tracking-tight leading-none">Obsidian Gym Manager</div>
             <div className="text-xs text-muted mt-1">Offline Console · v1.0</div>
           </div>
         </div>

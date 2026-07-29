@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button, Input, Label, Card } from "@/components/ui";
+import BrandMark from "@/components/BrandMark";
 import { useRouter } from "next/navigation";
 
 function LoginScreen() {
@@ -113,10 +114,10 @@ function LoginScreen() {
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent text-white text-3xl font-black mb-4" style={{background: "var(--accent)"}}>
-              IF
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent mb-4" style={{background: "var(--accent)"}}>
+              <BrandMark size={52} />
             </div>
-            <h1 className="text-3xl font-black tracking-tight">IronForge Gym</h1>
+            <h1 className="text-3xl font-black tracking-tight">Obsidian Gym Manager</h1>
             <p className="text-muted mt-2">
               Secure offline management. Let's create your superuser account.
             </p>
@@ -175,10 +176,10 @@ function LoginScreen() {
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-4xl">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl text-white text-3xl font-black mb-4" style={{background: "var(--accent)"}}>
-            IF
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl text-white mb-4" style={{background: "var(--accent)"}}>
+            <BrandMark size={52} />
           </div>
-          <h1 className="text-3xl font-black tracking-tight">IronForge Gym</h1>
+          <h1 className="text-3xl font-black tracking-tight">Obsidian Gym Manager</h1>
           <p className="text-muted mt-1">
             Offline Management Console · All data encrypted & local
           </p>

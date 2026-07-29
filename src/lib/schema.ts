@@ -171,7 +171,7 @@ export const DB_VERSION = 1;
 
 export function defaultSettings(): SystemSettings {
   return {
-    gymName: "IronForge Gym",
+    gymName: "Obsidian Gym Manager",
     currency: "PKR",
     qrAttendanceEnabled: false,
     turnstileEnabled: false,

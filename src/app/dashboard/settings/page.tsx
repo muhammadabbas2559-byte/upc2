@@ -124,7 +124,7 @@ export default function SettingsPage() {
             <Input
               value={form.gymName}
               onChange={(e) => setForm({ ...form, gymName: e.target.value })}
-              placeholder="IronForge Gym"
+              placeholder="Obsidian Gym Manager"
               disabled={!can(currentUser, "settings.edit")}
             />
           </div>
