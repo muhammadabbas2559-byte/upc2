@@ -9,7 +9,7 @@ import { logAction, flushLogs } from "@/lib/logger";
 import type { SystemSettings } from "@/lib/schema";
 
 export default function SettingsPage() {
-  const { currentUser, logout, createUser, publicUsers, deleteUser } = useAuth();
+  const { currentUser, refresh, createUser, publicUsers, deleteUser } = useAuth();
   const { db, updateSettings } = useData();
 
   const [form, setForm] = useState<SystemSettings | null>(null);
@@ -98,7 +98,9 @@ export default function SettingsPage() {
       logAction("destroy_everything");
       flushLogs();
       await destroyEverything(destroyPwd);
-      logout();
+      // The database and bootstrap metadata are gone; synchronize the auth
+      // context so the app returns to the first-run setup screen.
+      refresh();
     } catch (err) {
       setDestroyError((err as Error).message);
     }
