@@ -6,6 +6,20 @@ const fs = require("fs");
 const PORT = 3210;
 let mainWindow;
 let nextServer;
+let logFile;
+
+function writeLog(message, error) {
+  const detail = error ? `\n${error.stack || error}` : "";
+  const line = `[${new Date().toISOString()}] ${message}${detail}\n`;
+  console.log(line.trim());
+  if (logFile) {
+    try {
+      fs.appendFileSync(logFile, line, "utf8");
+    } catch (writeError) {
+      console.error("Could not write startup log:", writeError);
+    }
+  }
+}
 
 function serverDirectory() {
   return app.isPackaged
@@ -16,14 +30,13 @@ function serverDirectory() {
 function startNextServer() {
   const root = serverDirectory();
   const serverFile = path.join(root, "server.js");
+  writeLog(`Starting Next.js server. packaged=${app.isPackaged} root=${root}`);
 
   if (!fs.existsSync(serverFile)) {
     throw new Error(`Packaged server was not found at: ${serverFile}`);
   }
 
-  // utilityProcess.fork uses Electron's bundled Node runtime directly. This
-  // is more reliable on Windows than spawning the packaged Electron exe with
-  // ELECTRON_RUN_AS_NODE.
+  writeLog(`Found server entry: ${serverFile}`);
   nextServer = utilityProcess.fork(serverFile, [], {
     cwd: root,
     env: {
@@ -32,24 +45,33 @@ function startNextServer() {
       HOSTNAME: "127.0.0.1",
       PORT: String(PORT),
     },
+    stdio: "pipe",
   });
 
+  nextServer.stdout?.on("data", (data) => writeLog(`[Next stdout] ${data.toString().trim()}`));
+  nextServer.stderr?.on("data", (data) => writeLog(`[Next stderr] ${data.toString().trim()}`));
+  nextServer.on("spawn", () => writeLog("Next.js utility process started"));
+  nextServer.on("spawn-error", (error) => writeLog("Next.js utility process spawn error", error));
   nextServer.on("exit", (code, signal) => {
-    if (code !== 0 && !app.isQuitting) {
-      console.error(`Next.js server exited with code ${code}, signal ${signal}`);
-    }
+    writeLog(`Next.js server exited with code ${code}, signal ${signal}`);
   });
 }
 
 function waitForServer(attempts = 80) {
   return new Promise((resolve, reject) => {
+    let lastError;
     const check = () => {
       const request = http.get(`http://127.0.0.1:${PORT}`, (response) => {
         response.resume();
+        writeLog(`Next.js server responded with HTTP ${response.statusCode}`);
         resolve();
       });
-      request.on("error", () => {
-        if (attempts-- <= 0) return reject(new Error("Next.js server did not start in time"));
+      request.on("error", (error) => {
+        lastError = error;
+        if (attempts-- <= 0) {
+          reject(new Error(`Next.js server did not start in time: ${lastError.message}`));
+          return;
+        }
         setTimeout(check, 250);
       });
     };
@@ -58,14 +80,18 @@ function waitForServer(attempts = 80) {
 }
 
 async function createWindow() {
+  logFile = path.join(app.getPath("userData"), "startup.log");
+  writeLog("Application startup");
+
   try {
     startNextServer();
     await waitForServer();
   } catch (error) {
+    writeLog("Application server startup failed", error);
     const message = error instanceof Error ? error.message : String(error);
     dialog.showErrorBox(
       "Obsidian Gym Manager",
-      `The local application server could not start.\n\n${message}`
+      `The local application server could not start.\n\n${message}\n\nA diagnostic log was saved here:\n${logFile}`
     );
     app.quit();
     return;
@@ -83,10 +109,14 @@ async function createWindow() {
     },
   });
 
+  writeLog(`Loading http://127.0.0.1:${PORT}`);
   await mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
+  writeLog("Application window loaded");
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(createWindow).catch((error) => {
+  writeLog("Unhandled startup error", error);
+});
 
 app.on("window-all-closed", () => {
   if (nextServer) nextServer.kill();
@@ -95,5 +125,6 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   app.isQuitting = true;
+  writeLog("Application shutting down");
   if (nextServer) nextServer.kill();
 });
