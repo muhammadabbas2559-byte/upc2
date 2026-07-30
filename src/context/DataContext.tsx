@@ -14,6 +14,7 @@ import type {
 } from "@/lib/schema";
 import { useAuth } from "./AuthContext";
 import { generateMemberUid } from "@/lib/utils";
+import { assertCan } from "@/lib/rbac";
 
 interface DataContextValue {
   db: Database | null;
@@ -216,6 +217,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteMember: DataContextValue["deleteMember"] = async (id) => {
+    assertCan(currentUser, "member.delete");
     await db.mutate((d) => {
       d.members = d.members.filter((m) => m.id !== id);
       d.transactions = d.transactions.filter((t) => t.memberId !== id);
@@ -282,6 +284,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addInventoryItem: DataContextValue["addInventoryItem"] = async (i) => {
+    assertCan(currentUser, "inventory.create");
     const item: InventoryItem = {
       ...i,
       id: Math.random().toString(36).slice(2),
@@ -294,6 +297,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return item;
   };
   const updateInventoryItem: DataContextValue["updateInventoryItem"] = async (id, patch) => {
+    assertCan(currentUser, "inventory.edit");
     await db.mutate((d) => {
       const item = d.inventory.find((i) => i.id === id);
       if (item) Object.assign(item, patch);
@@ -301,6 +305,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     reload();
   };
   const deleteInventoryItem: DataContextValue["deleteInventoryItem"] = async (id) => {
+    assertCan(currentUser, "inventory.delete");
     await db.mutate((d) => {
       d.inventory = d.inventory.filter((i) => i.id !== id);
     });
@@ -308,6 +313,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addPlan: DataContextValue["addPlan"] = async (p) => {
+    assertCan(currentUser, "plan.create");
     const plan: SubscriptionPlan = {
       ...p,
       id: Math.random().toString(36).slice(2),
@@ -321,6 +327,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return plan;
   };
   const updatePlan: DataContextValue["updatePlan"] = async (id, patch) => {
+    assertCan(currentUser, "plan.edit");
     await db.mutate((d) => {
       const p = d.plans.find((x) => x.id === id);
       if (p) Object.assign(p, patch);
@@ -328,6 +335,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     reload();
   };
   const deletePlan: DataContextValue["deletePlan"] = async (id) => {
+    assertCan(currentUser, "plan.delete");
     await db.mutate((d) => {
       d.plans = d.plans.filter((p) => p.id !== id);
     });
@@ -466,6 +474,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   };
 
   const addExpense: DataContextValue["addExpense"] = async (e) => {
+    assertCan(currentUser, "expense.create");
     await db.mutate((dx) => {
       const exp: Expense = {
         id: Math.random().toString(36).slice(2),

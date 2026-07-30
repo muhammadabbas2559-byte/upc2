@@ -70,7 +70,6 @@ const GRANTS: Record<"superuser" | "user", Permission[]> = {
     "payment.process",
     "inventory.view",
     "plan.view",
-    "expense.create",
     "settings.view",
   ],
 };
