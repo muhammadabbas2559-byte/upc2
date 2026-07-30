@@ -36,6 +36,12 @@ function startNextServer() {
   if (!fs.existsSync(serverFile)) {
     throw new Error(`Packaged server was not found at: ${serverFile}`);
   }
+  for (const moduleName of ["next", "react", "react-dom"]) {
+    const modulePackage = path.join(root, "node_modules", moduleName, "package.json");
+    if (!fs.existsSync(modulePackage)) {
+      throw new Error(`Packaged runtime is missing ${moduleName}: ${modulePackage}`);
+    }
+  }
 
   writeLog(`Found server entry: ${serverFile}`);
   const wrapperFile = app.isPackaged
@@ -48,6 +54,8 @@ function startNextServer() {
       NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
       PORT: String(PORT),
+      NODE_PATH: path.join(root, "node_modules"),
+      NEXT_TELEMETRY_DISABLED: "1",
       OBSIDIAN_STARTUP_LOG: logFile,
     },
     stdio: "pipe",
