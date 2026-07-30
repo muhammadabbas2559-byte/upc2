@@ -1,7 +1,7 @@
-const { app, BrowserWindow, dialog } = require("electron");
-const { spawn } = require("child_process");
+const { app, BrowserWindow, dialog, utilityProcess } = require("electron");
 const path = require("path");
 const http = require("http");
+const fs = require("fs");
 
 const PORT = 3210;
 let mainWindow;
@@ -15,23 +15,33 @@ function serverDirectory() {
 
 function startNextServer() {
   const root = serverDirectory();
-  nextServer = spawn(process.execPath, [path.join(root, "server.js")], {
+  const serverFile = path.join(root, "server.js");
+
+  if (!fs.existsSync(serverFile)) {
+    throw new Error(`Packaged server was not found at: ${serverFile}`);
+  }
+
+  // utilityProcess.fork uses Electron's bundled Node runtime directly. This
+  // is more reliable on Windows than spawning the packaged Electron exe with
+  // ELECTRON_RUN_AS_NODE.
+  nextServer = utilityProcess.fork(serverFile, [], {
     cwd: root,
     env: {
       ...process.env,
-      ELECTRON_RUN_AS_NODE: "1",
       NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
       PORT: String(PORT),
     },
-    windowsHide: true,
   });
 
-  nextServer.on("error", (error) => console.error("Next.js server error:", error));
-  nextServer.stderr.on("data", (data) => console.error(`[Next] ${data}`));
+  nextServer.on("exit", (code, signal) => {
+    if (code !== 0 && !app.isQuitting) {
+      console.error(`Next.js server exited with code ${code}, signal ${signal}`);
+    }
+  });
 }
 
-function waitForServer(attempts = 60) {
+function waitForServer(attempts = 80) {
   return new Promise((resolve, reject) => {
     const check = () => {
       const request = http.get(`http://127.0.0.1:${PORT}`, (response) => {
@@ -39,7 +49,7 @@ function waitForServer(attempts = 60) {
         resolve();
       });
       request.on("error", () => {
-        if (attempts-- <= 0) return reject(new Error("Next.js server did not start"));
+        if (attempts-- <= 0) return reject(new Error("Next.js server did not start in time"));
         setTimeout(check, 250);
       });
     };
@@ -48,13 +58,14 @@ function waitForServer(attempts = 60) {
 }
 
 async function createWindow() {
-  startNextServer();
   try {
+    startNextServer();
     await waitForServer();
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     dialog.showErrorBox(
       "Obsidian Gym Manager",
-      "The application could not start its local server. Please reinstall the application."
+      `The local application server could not start.\n\n${message}`
     );
     app.quit();
     return;
@@ -83,5 +94,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  app.isQuitting = true;
   if (nextServer) nextServer.kill();
 });
