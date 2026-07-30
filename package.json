@@ -52,7 +52,10 @@
     "extraResources": [
       {
         "from": ".next/standalone",
-        "to": "standalone"
+        "to": "standalone",
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": ".next/static",
@@ -61,6 +64,18 @@
       {
         "from": "electron/next-server-wrapper.cjs",
         "to": "next-server-wrapper.cjs"
+      },
+      {
+        "from": ".next/standalone/node_modules/next",
+        "to": "standalone/node_modules/next"
+      },
+      {
+        "from": ".next/standalone/node_modules/@next",
+        "to": "standalone/node_modules/@next"
+      },
+      {
+        "from": ".next/standalone/node_modules/@swc",
+        "to": "standalone/node_modules/@swc"
       }
     ],
     "win": {
