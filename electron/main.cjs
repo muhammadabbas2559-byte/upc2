@@ -1,13 +1,26 @@
 const { app, BrowserWindow, dialog, utilityProcess } = require("electron");
 const path = require("path");
 const http = require("http");
+const net = require("net");
 const fs = require("fs");
 
-const PORT = 3210;
+const DEFAULT_PORT = 3210;
+let serverPort = DEFAULT_PORT;
 let mainWindow;
 let nextServer;
 let nextServerFailure;
 let logFile;
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  });
+}
 
 function writeLog(message, error) {
   const detail = error ? `\n${error.stack || error}` : "";
@@ -28,10 +41,25 @@ function serverDirectory() {
     : path.join(__dirname, "..", ".next", "standalone");
 }
 
+function findAvailablePort(startPort = DEFAULT_PORT) {
+  return new Promise((resolve, reject) => {
+    const probe = (port) => {
+      const server = net.createServer();
+      server.once("error", () => probe(port + 1));
+      server.once("listening", () => {
+        server.close(() => resolve(port));
+      });
+      server.listen(port, "127.0.0.1");
+    };
+    probe(startPort);
+    setTimeout(() => reject(new Error("Could not find an available local port")), 5000);
+  });
+}
+
 function startNextServer() {
   const root = serverDirectory();
   const serverFile = path.join(root, "server.js");
-  writeLog(`Starting Next.js server. packaged=${app.isPackaged} root=${root}`);
+  writeLog(`Starting Next.js server. packaged=${app.isPackaged} root=${root} port=${serverPort}`);
 
   if (!fs.existsSync(serverFile)) {
     throw new Error(`Packaged server was not found at: ${serverFile}`);
@@ -53,7 +81,7 @@ function startNextServer() {
       ...process.env,
       NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
-      PORT: String(PORT),
+      PORT: String(serverPort),
       NODE_PATH: path.join(root, "node_modules"),
       NEXT_TELEMETRY_DISABLED: "1",
       OBSIDIAN_STARTUP_LOG: logFile,
@@ -80,7 +108,7 @@ function waitForServer(attempts = 80) {
         reject(nextServerFailure);
         return;
       }
-      const request = http.get(`http://127.0.0.1:${PORT}`, (response) => {
+      const request = http.get(`http://127.0.0.1:${serverPort}`, (response) => {
         response.resume();
         writeLog(`Next.js server responded with HTTP ${response.statusCode}`);
         resolve();
@@ -103,6 +131,8 @@ async function createWindow() {
   writeLog("Application startup");
 
   try {
+    serverPort = await findAvailablePort();
+    writeLog(`Selected local port ${serverPort}`);
     startNextServer();
     await waitForServer();
   } catch (error) {
@@ -128,14 +158,16 @@ async function createWindow() {
     },
   });
 
-  writeLog(`Loading http://127.0.0.1:${PORT}`);
-  await mainWindow.loadURL(`http://127.0.0.1:${PORT}`);
+  writeLog(`Loading http://127.0.0.1:${serverPort}`);
+  await mainWindow.loadURL(`http://127.0.0.1:${serverPort}`);
   writeLog("Application window loaded");
 }
 
-app.whenReady().then(createWindow).catch((error) => {
-  writeLog("Unhandled startup error", error);
-});
+if (hasSingleInstanceLock) {
+  app.whenReady().then(createWindow).catch((error) => {
+    writeLog("Unhandled startup error", error);
+  });
+}
 
 app.on("window-all-closed", () => {
   if (nextServer) nextServer.kill();
