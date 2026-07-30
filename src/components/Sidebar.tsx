@@ -26,7 +26,7 @@ const ICONS = {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { db } = useData();
 
   const items: { href: string; label: string; icon: keyof typeof ICONS; perm?: string }[] = [
@@ -92,6 +92,13 @@ export default function Sidebar() {
             </div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={logout}
+          className="mt-2 w-full btn btn-secondary !justify-start !text-xs"
+        >
+          🚪 Logout
+        </button>
       </div>
     </aside>
   );

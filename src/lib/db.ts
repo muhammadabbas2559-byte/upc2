@@ -319,17 +319,16 @@ export async function login(username: string, password: string): Promise<User> {
 /** Switch user in-app without re-entering password (only to ordinary users). */
 export async function switchToUser(
   targetUserId: string,
-  suPasswordConfirmation?: string
+  targetPassword?: string
 ): Promise<User> {
   if (!_db || !_currentUser) throw new Error("Not authenticated");
   const target = _db.users.find((u) => u.id === targetUserId);
   if (!target) throw new Error("User not found");
-  if (target.role === "superuser") {
-    if (!suPasswordConfirmation)
-      throw new Error("Superuser password is required to switch to superuser");
-    const ok = await verifyPassword(suPasswordConfirmation, target.passwordHash);
-    if (!ok) throw new Error("Incorrect superuser password");
+  if (!targetPassword) {
+    throw new Error("Password is required to switch users");
   }
+  const ok = await verifyPassword(targetPassword, target.passwordHash);
+  if (!ok) throw new Error("Incorrect password for selected user");
   _currentUser = target;
   return target;
 }

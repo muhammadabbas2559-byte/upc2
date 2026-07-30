@@ -16,7 +16,8 @@ export default function TopBar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [switchOpen, setSwitchOpen] = useState(false);
-  const [suPwd, setSuPwd] = useState("");
+  const [switchPassword, setSwitchPassword] = useState("");
+  const [pendingSwitchUserId, setPendingSwitchUserId] = useState<string | null>(null);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -31,7 +32,8 @@ export default function TopBar() {
         setNotifOpen(false);
       if (switchRef.current && !switchRef.current.contains(e.target as Node)) {
         setSwitchOpen(false);
-        setSuPwd("");
+        setSwitchPassword("");
+        setPendingSwitchUserId(null);
         setSwitchError(null);
       }
     }
@@ -83,12 +85,13 @@ export default function TopBar() {
       ].slice(0, 8)
     : [];
 
-  async function handleSwitch(userId: string, isSu: boolean) {
+  async function handleSwitch(userId: string) {
     try {
-      await switchUser(userId, isSu ? suPwd : undefined);
+      await switchUser(userId, switchPassword);
       logAction("switch_user", { toUserId: userId });
       setSwitchOpen(false);
-      setSuPwd("");
+      setSwitchPassword("");
+      setPendingSwitchUserId(null);
       setSwitchError(null);
     } catch (err) {
       setSwitchError((err as Error).message);
@@ -266,8 +269,9 @@ export default function TopBar() {
                       key={u.id}
                       disabled={isCurrent}
                       onClick={() => {
-                        if (u.role === "superuser") return; // wait for password
-                        handleSwitch(u.id, false);
+                        setPendingSwitchUserId(u.id);
+                        setSwitchPassword("");
+                        setSwitchError(null);
                       }}
                       className={
                         "w-full flex items-center gap-3 p-2 rounded-lg text-left transition " +
@@ -298,36 +302,30 @@ export default function TopBar() {
                 })}
               </div>
 
-              {/* Superuser password prompt only shown when superuser exists & not already */}
-              {currentUser?.role !== "superuser" &&
-                can(currentUser, "member.view") && (
-                  <div className="p-3 border-t border-app space-y-2">
-                    <div className="text-xs text-muted">
-                      To switch to Superuser, enter their password:
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        className="input !py-2 !text-xs"
-                        placeholder="Superuser password"
-                        value={suPwd}
-                        onChange={(e) => setSuPwd(e.target.value)}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          const su = publicUsers.find((u) => u.role === "superuser");
-                          if (su) handleSwitch(su.id, true);
-                        }}
-                      >
-                        Go
-                      </Button>
-                    </div>
-                    {switchError && (
-                      <div className="text-xs text-danger">{switchError}</div>
-                    )}
+              {pendingSwitchUserId && (
+                <div className="p-3 border-t border-app space-y-2">
+                  <div className="text-xs text-muted">
+                    Enter the password for {publicUsers.find((u) => u.id === pendingSwitchUserId)?.displayName || "the selected user"}:
                   </div>
-                )}
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      className="input !py-2 !text-xs"
+                      placeholder="Selected user password"
+                      value={switchPassword}
+                      onChange={(e) => setSwitchPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSwitch(pendingSwitchUserId);
+                      }}
+                      autoFocus
+                    />
+                    <Button size="sm" onClick={() => handleSwitch(pendingSwitchUserId)}>
+                      Switch
+                    </Button>
+                  </div>
+                  {switchError && <div className="text-xs text-danger">{switchError}</div>}
+                </div>
+              )}
 
               <div className="p-2 border-t border-app">
                 <button
