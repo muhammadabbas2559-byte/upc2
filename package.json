@@ -1,12 +1,14 @@
 {
-  "name": "nextjs-postgresql-template",
+  "name": "obsidian-gym-manager",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "electron": "electron .",
+    "desktop:build": "npm run build && electron-builder"
   },
   "dependencies": {
     "@types/qrcode": "^1.5.6",
@@ -33,6 +35,51 @@
     "eslint-config-next": "16.2.6",
     "postcss": "8.5.8",
     "tailwindcss": "4.1.17",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "version": "1.0.0",
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "com.obsidian.gymmanager",
+    "productName": "Obsidian Gym Manager",
+    "asar": true,
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone"
+      },
+      {
+        "from": ".next/static",
+        "to": "standalone/.next/static"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    }
   }
 }
