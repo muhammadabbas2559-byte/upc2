@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { BrowserMultiFormatReader, type IScannerControls } from "@zxing/browser";
 import { useData } from "@/context/DataContext";
 import { Card, Button, Input, Badge, EmptyState } from "@/components/ui";
 import { formatDate, daysUntil, formatPKR } from "@/lib/utils";
@@ -13,8 +14,11 @@ export default function CheckInPage() {
   const [q, setQ] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const qrEnabled = db?.settings.qrAttendanceEnabled;
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
+  const processingQrRef = useRef(false);
 
   const results = useMemo(() => {
     if (!db) return [];
@@ -45,20 +49,64 @@ export default function CheckInPage() {
     }
   }
 
-  // Simulate QR paste/scan
-  async function handleScanPaste(e: React.ClipboardEvent<HTMLInputElement>) {
-    if (!qrEnabled) return;
-    const text = e.clipboardData.getData("text");
-    if (text.startsWith("gym://checkin/")) {
-      const uid = text.replace("gym://checkin/", "").trim();
-      const m = db?.members.find((x) => x.uid === uid);
-      if (m) {
-        e.preventDefault();
-        await handleCheckIn(m.id, "qr");
-        setQ("");
-      }
+  async function processQrText(text: string) {
+    if (processingQrRef.current) return;
+    const value = text.trim();
+    if (!value.startsWith("gym://checkin/")) return;
+    processingQrRef.current = true;
+    setError(null);
+    setQ("");
+    try {
+      const uid = value.replace("gym://checkin/", "").trim();
+      const member = db?.members.find((x) => x.uid === uid);
+      if (!member) throw new Error("QR code is not linked to a registered member");
+      await handleCheckIn(member.id, "qr");
+      setCameraOpen(false);
+    } finally {
+      processingQrRef.current = false;
     }
   }
+
+  // USB/Bluetooth scanners act as keyboards. The input is focused automatically
+  // and a complete gym:// value is processed as soon as it arrives.
+  async function handleScannerInput(value: string) {
+    setQ(value);
+    if (value.trim().startsWith("gym://checkin/")) await processQrText(value);
+  }
+
+  async function handleScanPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData("text");
+    if (text.startsWith("gym://checkin/")) {
+      e.preventDefault();
+      await processQrText(text);
+    }
+  }
+
+  useEffect(() => {
+    if (!cameraOpen || !videoRef.current) return;
+    let cancelled = false;
+    const reader = new BrowserMultiFormatReader();
+    setCameraError(null);
+
+    reader
+      .decodeFromVideoDevice(undefined, videoRef.current, async (result) => {
+        if (cancelled || !result) return;
+        await processQrText(result.getText());
+      })
+      .then((controls) => {
+        if (cancelled) controls.stop();
+        else scannerControlsRef.current = controls;
+      })
+      .catch(() => {
+        if (!cancelled) setCameraError("Unable to access the camera. Check browser permission and try again.");
+      });
+
+    return () => {
+      cancelled = true;
+      scannerControlsRef.current?.stop();
+      scannerControlsRef.current = null;
+    };
+  }, [cameraOpen]);
 
   if (!db) return null;
   const today = new Date();
@@ -72,20 +120,47 @@ export default function CheckInPage() {
       <div>
         <h1 className="text-3xl font-black tracking-tight">Quick Check-in</h1>
         <p className="text-muted mt-1">
-          Search by name, UID, or phone. {qrEnabled ? "QR scanner mode active." : "Enable QR scanning in Settings for hardware scanners."}
+          Search by name, UID, or phone. Connected QR scanners work automatically; use the camera button for camera scanning.
         </p>
       </div>
 
       <Card>
         <div className="flex gap-3">
           <Input
-            placeholder={qrEnabled ? "Scan QR or type name / UID..." : "Search name or UID..."}
+            placeholder="Scan QR or type name / UID..."
             value={q}
             autoFocus
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => handleScannerInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") processQrText(q);
+            }}
             onPaste={handleScanPaste}
           />
+          <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setCameraError(null);
+                setCameraOpen(true);
+              }}
+              title="Scan with camera"
+              aria-label="Scan with camera"
+            >
+              📷 Camera
+            </Button>
         </div>
+        {cameraOpen && (
+          <div className="mt-4 rounded-xl border border-app bg-black p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold">Scan member QR code</div>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setCameraOpen(false)}>
+                Close camera
+              </Button>
+            </div>
+            <video ref={videoRef} className="w-full max-h-80 rounded-lg object-cover" muted playsInline />
+            {cameraError && <div className="mt-2 text-sm text-danger">{cameraError}</div>}
+          </div>
+        )}
         {success && (
           <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/40 text-green-400 text-sm">
             ✅ {success}
