@@ -37,13 +37,15 @@ function startNextServer() {
   }
 
   writeLog(`Found server entry: ${serverFile}`);
-  nextServer = utilityProcess.fork(serverFile, [], {
+  const wrapperFile = path.join(__dirname, "next-server-wrapper.cjs");
+  nextServer = utilityProcess.fork(wrapperFile, [serverFile], {
     cwd: root,
     env: {
       ...process.env,
       NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
       PORT: String(PORT),
+      OBSIDIAN_STARTUP_LOG: logFile,
     },
     stdio: "pipe",
   });
