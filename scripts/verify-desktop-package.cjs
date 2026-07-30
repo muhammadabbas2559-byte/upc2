@@ -14,14 +14,25 @@ for (const file of required) {
   }
 }
 
-const unpacked = path.join("dist", "win-unpacked", "resources", "standalone");
-if (fs.existsSync(path.join("dist", "win-unpacked"))) {
-  for (const file of ["server.js", "node_modules/next/package.json", "node_modules/react/package.json", "node_modules/react-dom/package.json"]) {
-    const target = path.join(unpacked, file);
-    if (!fs.existsSync(target)) {
-      throw new Error(`Windows package is incomplete. Missing: ${target}`);
-    }
+const unpackedRoot = path.join("dist", "win-unpacked");
+if (!fs.existsSync(unpackedRoot)) {
+  throw new Error(
+    "Windows unpacked output was not created at dist/win-unpacked. " +
+      "Run this command on the Windows target: electron-builder --win nsis."
+  );
+}
+
+const unpacked = path.join(unpackedRoot, "resources", "standalone");
+for (const file of ["server.js", "node_modules/next/package.json", "node_modules/react/package.json", "node_modules/react-dom/package.json"]) {
+  const target = path.join(unpacked, file);
+  if (!fs.existsSync(target)) {
+    throw new Error(`Windows package is incomplete. Missing: ${target}`);
   }
+}
+
+const wrapper = path.join(unpackedRoot, "resources", "next-server-wrapper.cjs");
+if (!fs.existsSync(wrapper)) {
+  throw new Error(`Windows package is incomplete. Missing: ${wrapper}`);
 }
 
 console.log("Desktop package verification passed.");
