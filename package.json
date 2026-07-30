@@ -57,6 +57,10 @@
       {
         "from": ".next/static",
         "to": "standalone/.next/static"
+      },
+      {
+        "from": "electron/next-server-wrapper.cjs",
+        "to": "next-server-wrapper.cjs"
       }
     ],
     "win": {

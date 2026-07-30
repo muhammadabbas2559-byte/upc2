@@ -37,7 +37,9 @@ function startNextServer() {
   }
 
   writeLog(`Found server entry: ${serverFile}`);
-  const wrapperFile = path.join(__dirname, "next-server-wrapper.cjs");
+  const wrapperFile = app.isPackaged
+    ? path.join(process.resourcesPath, "next-server-wrapper.cjs")
+    : path.join(__dirname, "next-server-wrapper.cjs");
   nextServer = utilityProcess.fork(wrapperFile, [serverFile], {
     cwd: root,
     env: {
