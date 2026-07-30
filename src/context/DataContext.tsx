@@ -237,11 +237,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await db.mutate((d) => {
       const m = d.members.find((x) => x.id === id);
       if (!m) return;
-      // Shift subscription end by frozen duration
-      if (m.frozenSince && m.subscriptionEnd) {
-        const frozenMs = Date.now() - new Date(m.frozenSince).getTime();
-        m.subscriptionEnd = new Date(new Date(m.subscriptionEnd).getTime() + frozenMs).toISOString();
-      }
+      // Freezing is an administrative status only. Subscription time keeps
+      // running, so unfreezing must not extend the original end date.
       m.frozenSince = undefined;
     });
     reload();
