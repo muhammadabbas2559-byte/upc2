@@ -6,6 +6,7 @@ const fs = require("fs");
 const PORT = 3210;
 let mainWindow;
 let nextServer;
+let nextServerFailure;
 let logFile;
 
 function writeLog(message, error) {
@@ -57,7 +58,9 @@ function startNextServer() {
   nextServer.on("spawn", () => writeLog("Next.js utility process started"));
   nextServer.on("spawn-error", (error) => writeLog("Next.js utility process spawn error", error));
   nextServer.on("exit", (code, signal) => {
-    writeLog(`Next.js server exited with code ${code}, signal ${signal}`);
+    const message = `Next.js server exited with code ${code}, signal ${signal}`;
+    writeLog(message);
+    if (code !== 0 && !app.isQuitting) nextServerFailure = new Error(message);
   });
 }
 
@@ -65,6 +68,10 @@ function waitForServer(attempts = 80) {
   return new Promise((resolve, reject) => {
     let lastError;
     const check = () => {
+      if (nextServerFailure) {
+        reject(nextServerFailure);
+        return;
+      }
       const request = http.get(`http://127.0.0.1:${PORT}`, (response) => {
         response.resume();
         writeLog(`Next.js server responded with HTTP ${response.statusCode}`);
