@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "electron": "electron .",
-    "desktop:build": "npm run build && electron-builder --win nsis && node scripts/verify-desktop-package.cjs"
+    "desktop:build": "npm run build && node scripts/prepare-desktop-runtime.cjs && electron-builder --win nsis && node scripts/verify-desktop-package.cjs"
   },
   "dependencies": {
     "@types/qrcode": "^1.5.6",
@@ -51,26 +51,15 @@
     ],
     "extraResources": [
       {
-        "from": ".next/standalone",
+        "from": "desktop-runtime",
         "to": "standalone",
         "filter": [
           "**/*"
         ]
       },
       {
-        "from": ".next/static",
-        "to": "standalone/.next/static"
-      },
-      {
         "from": "electron/next-server-wrapper.cjs",
         "to": "next-server-wrapper.cjs"
-      },
-      {
-        "from": "node_modules",
-        "to": "standalone/node_modules",
-        "filter": [
-          "**/*"
-        ]
       }
     ],
     "win": {
