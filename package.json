@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "electron": "electron .",
-    "desktop:build": "npm run build && electron-builder"
+    "desktop:build": "npm run build && electron-builder --win nsis && node scripts/verify-desktop-package.cjs"
   },
   "dependencies": {
     "@types/qrcode": "^1.5.6",
@@ -66,36 +66,11 @@
         "to": "next-server-wrapper.cjs"
       },
       {
-        "from": ".next/standalone/node_modules/next",
-        "to": "standalone/node_modules/next"
-      },
-      {
-        "from": ".next/standalone/node_modules/@next",
-        "to": "standalone/node_modules/@next"
-      },
-      {
-        "from": ".next/standalone/node_modules/@swc",
-        "to": "standalone/node_modules/@swc"
-      },
-      {
-        "from": ".next/standalone/node_modules/react",
-        "to": "standalone/node_modules/react"
-      },
-      {
-        "from": ".next/standalone/node_modules/react-dom",
-        "to": "standalone/node_modules/react-dom"
-      },
-      {
-        "from": ".next/standalone/node_modules/styled-jsx",
-        "to": "standalone/node_modules/styled-jsx"
-      },
-      {
-        "from": ".next/standalone/node_modules/sharp",
-        "to": "standalone/node_modules/sharp"
-      },
-      {
-        "from": ".next/standalone/node_modules/@img",
-        "to": "standalone/node_modules/@img"
+        "from": "node_modules",
+        "to": "standalone/node_modules",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
