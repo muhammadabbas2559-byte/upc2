@@ -24,6 +24,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { can } from "@/lib/rbac";
 import { logAction } from "@/lib/logger";
+import { getMemberAchievementStatuses } from "@/lib/loyalty";
 
 async function downloadMemberIdCard(member: {
   fullName: string;
@@ -121,6 +122,13 @@ export default function MemberProfilePage() {
         .filter((a) => a.memberId === member?.id)
         .sort((a, b) => new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime()) ?? [],
     [db, member]
+  );
+
+  const achievementStatuses = useMemo(
+    () => member && db
+      ? getMemberAchievementStatuses(member, memberTxs, memberAttendance.length)
+      : [],
+    [db, member, memberTxs, memberAttendance.length]
   );
 
   if (!db || !member) {
@@ -390,25 +398,25 @@ export default function MemberProfilePage() {
                   Milestones, memberships, and purchases earned by this m.
                 </p>
               </div>
-              <Badge variant="superuser">{m.achievements?.length || 0} trophies</Badge>
+              <Badge variant="superuser">
+                {achievementStatuses.filter((achievement) => achievement.earned).length} / {achievementStatuses.length} trophies
+              </Badge>
             </div>
-            {!m.achievements?.length ? (
-              <EmptyState
-                icon="🏆"
-                title="No trophies yet"
-                description="Trophies are awarded when a member joins, purchases plans, buys items, and hits spending milestones."
-              />
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {m.achievements.map((a) => (
-                  <div key={a.id} className="trophy" title={a.description}>
-                    <div className="trophy-icon">{a.icon}</div>
-                    <div className="text-xs font-bold text-primary leading-tight">{a.title}</div>
-                    <div className="text-[10px] text-dim">{formatDate(a.awardedAt)}</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {achievementStatuses.map((achievement) => (
+                <div
+                  key={achievement.title}
+                  className={"trophy transition " + (achievement.earned ? "" : "opacity-40 grayscale")}
+                  title={achievement.description}
+                >
+                  <div className="trophy-icon">{achievement.icon}</div>
+                  <div className="text-xs font-bold text-primary leading-tight">{achievement.title}</div>
+                  <div className="text-[10px] text-dim">
+                    {achievement.earned ? "Unlocked" : `Goal: ${achievement.threshold}`}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
       )}
