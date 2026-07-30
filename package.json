@@ -76,6 +76,26 @@
       {
         "from": ".next/standalone/node_modules/@swc",
         "to": "standalone/node_modules/@swc"
+      },
+      {
+        "from": ".next/standalone/node_modules/react",
+        "to": "standalone/node_modules/react"
+      },
+      {
+        "from": ".next/standalone/node_modules/react-dom",
+        "to": "standalone/node_modules/react-dom"
+      },
+      {
+        "from": ".next/standalone/node_modules/styled-jsx",
+        "to": "standalone/node_modules/styled-jsx"
+      },
+      {
+        "from": ".next/standalone/node_modules/sharp",
+        "to": "standalone/node_modules/sharp"
+      },
+      {
+        "from": ".next/standalone/node_modules/@img",
+        "to": "standalone/node_modules/@img"
       }
     ],
     "win": {
