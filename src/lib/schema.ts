@@ -108,6 +108,8 @@ export interface AttendanceRecord {
   memberId: string;
   memberName: string;
   checkedInAt: string;
+  checkedOutAt?: string;
+  checkedOutBy?: string;
   checkedInBy: string; // user id
   method: "manual" | "qr";
 }

@@ -28,6 +28,7 @@ interface DataContextValue {
   freezeMember: (id: string) => Promise<void>;
   unfreezeMember: (id: string) => Promise<void>;
   checkIn: (memberId: string, method?: "manual" | "qr") => Promise<void>;
+  checkOut: (memberId: string) => Promise<void>;
   // Inventory
   addInventoryItem: (i: Omit<InventoryItem, "id" | "createdAt">) => Promise<InventoryItem>;
   updateInventoryItem: (id: string, patch: Partial<InventoryItem>) => Promise<void>;
@@ -276,6 +277,26 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
     await db.mutate((dx) => {
       dx.attendance.push(record);
+    });
+    reload();
+  };
+
+  const checkOut: DataContextValue["checkOut"] = async (memberId) => {
+    const operator = db.getCurrentUser();
+    if (!operator) throw new Error("Not authenticated");
+    const attendance = db
+      .getDb()
+      .attendance
+      .filter((entry) => entry.memberId === memberId && !entry.checkedOutAt)
+      .sort((a, b) => new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime())[0];
+    if (!attendance) throw new Error("This member does not have an active check-in");
+
+    await db.mutate((data) => {
+      const entry = data.attendance.find((item) => item.id === attendance.id);
+      if (entry) {
+        entry.checkedOutAt = new Date().toISOString();
+        entry.checkedOutBy = operator.id;
+      }
     });
     reload();
   };
@@ -532,6 +553,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         freezeMember,
         unfreezeMember,
         checkIn,
+        checkOut,
         addInventoryItem,
         updateInventoryItem,
         deleteInventoryItem,

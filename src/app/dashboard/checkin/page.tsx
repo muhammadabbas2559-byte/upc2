@@ -9,7 +9,7 @@ import { can } from "@/lib/rbac";
 import { useAuth } from "@/context/AuthContext";
 
 export default function CheckInPage() {
-  const { db, checkIn } = useData();
+  const { db, checkIn, checkOut } = useData();
   const { currentUser } = useAuth();
   const [q, setQ] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
@@ -43,6 +43,21 @@ export default function CheckInPage() {
       if (m) {
         setSuccess(`Checked in ${m.fullName} at ${new Date().toLocaleTimeString()}`);
         logAction("checkin", { memberId, method });
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  async function handleCheckOut(memberId: string) {
+    setError(null);
+    setSuccess(null);
+    try {
+      await checkOut(memberId);
+      const member = db?.members.find((item) => item.id === memberId);
+      if (member) {
+        setSuccess(`Checked out ${member.fullName} at ${new Date().toLocaleTimeString()}`);
+        logAction("checkout", { memberId });
       }
     } catch (err) {
       setError((err as Error).message);
@@ -194,6 +209,9 @@ export default function CheckInPage() {
                     ? cooldownMs - (Date.now() - new Date(lastCheckIn.checkedInAt).getTime())
                     : 0;
                   const inCooldown = cooldownRemaining > 0;
+                  const activeCheckIn = db.attendance.find(
+                    (attendance) => attendance.memberId === m.id && !attendance.checkedOutAt
+                  );
                   const canCheckin = m.status !== "expired" && m.status !== "frozen" && !inCooldown;
                   const cooldownLabel = inCooldown
                     ? ` · available in ${Math.ceil(cooldownRemaining / 3_600_000)}h`
@@ -221,13 +239,19 @@ export default function CheckInPage() {
                           {cooldownLabel}
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        disabled={!canCheckin}
-                        onClick={() => handleCheckIn(m.id, "manual")}
-                      >
-                        ✓ Check-in
-                      </Button>
+                      {activeCheckIn ? (
+                        <Button size="sm" variant="secondary" onClick={() => handleCheckOut(m.id)}>
+                          ↪ Check-out
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          disabled={!canCheckin}
+                          onClick={() => handleCheckIn(m.id, "manual")}
+                        >
+                          ✓ Check-in
+                        </Button>
+                      )}
                     </div>
                   );
                 })}
@@ -257,7 +281,16 @@ export default function CheckInPage() {
                       · {r.method}
                     </div>
                   </div>
-                  <span className="text-accent">✓</span>
+                  {r.checkedOutAt ? (
+                    <div className="text-right text-xs text-muted">
+                      <div className="text-accent">Checked out</div>
+                      {new Date(r.checkedOutAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  ) : (
+                    <Button size="sm" variant="ghost" onClick={() => handleCheckOut(r.memberId)}>
+                      Check-out
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
