@@ -27,16 +27,14 @@ jobs:
         run: npm install -g @tauri-apps/cli
 
       - name: Install dependencies
-        working-directory: app
         run: npm install
 
       - name: Build Windows EXE
-        working-directory: app
         run: npm run tauri build -- --target x86_64-pc-windows-msvc
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4
         with:
           name: UPC2-Windows-Setup
-          path: app/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
           retention-days: 30
