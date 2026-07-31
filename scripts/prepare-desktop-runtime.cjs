@@ -14,14 +14,14 @@ function copy(source, target) {
 }
 
 copy(".next/standalone", ".");
-copy("node_modules", "node_modules");
+copy("node_modules", "runtime-deps");
 copy(".next/static", ".next/static");
 
 for (const required of [
   "server.js",
-  "node_modules/next/package.json",
-  "node_modules/react/package.json",
-  "node_modules/react-dom/package.json",
+  "runtime-deps/next/package.json",
+  "runtime-deps/react/package.json",
+  "runtime-deps/react-dom/package.json",
 ]) {
   if (!fs.existsSync(path.join(runtime, required))) {
     throw new Error(`Prepared desktop runtime is missing ${required}`);

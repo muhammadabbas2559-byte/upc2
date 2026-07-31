@@ -23,7 +23,7 @@ if (!fs.existsSync(unpackedRoot)) {
 }
 
 const unpacked = path.join(unpackedRoot, "resources", "standalone");
-for (const file of ["server.js", "node_modules/next/package.json", "node_modules/react/package.json", "node_modules/react-dom/package.json"]) {
+for (const file of ["server.js", "runtime-deps/next/package.json", "runtime-deps/react/package.json", "runtime-deps/react-dom/package.json"]) {
   const target = path.join(unpacked, file);
   if (!fs.existsSync(target)) {
     throw new Error(`Windows package is incomplete. Missing: ${target}`);
