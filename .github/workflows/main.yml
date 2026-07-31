@@ -1,0 +1,36 @@
+name: Build UPC2 Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master, arena/* ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - run: npm install -g @tauri-apps/cli
+
+      - name: Install dependencies
+        working-directory: upc2-standalone-clean
+        run: npm install
+
+      - name: Build Windows EXE
+        working-directory: upc2-standalone-clean
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: UPC2-Windows-Setup
+          path: upc2-standalone-clean/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
