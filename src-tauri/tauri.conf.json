@@ -6,26 +6,35 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "UPC2",
+    "productName": "Obsidian Gym Manager",
     "version": "1.0.0"
   },
   "tauri": {
-    "allowlist": { "all": true },
-    "windows": [{
-      "fullscreen": false,
-      "height": 900,
-      "resizable": true,
-      "title": "UPC2 - Gym Management System",
-      "width": 1400
-    }],
+    "allowlist": {
+      "all": true
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "height": 900,
+        "resizable": true,
+        "title": "Obsidian Gym Manager",
+        "width": 1400
+      }
+    ],
     "bundle": {
       "active": true,
-      "targets": ["nsis"],
-      "icon": ["icons/icon.ico"],
-      "identifier": "com.upc2.gym",
+      "targets": [
+        "nsis"
+      ],
+      "icon": [
+        "icons/icon.ico",
+        "icons/icon.png"
+      ],
+      "identifier": "com.obsidian.gymmanager",
       "copyright": "2026",
       "category": "Business",
-      "shortDescription": "UPC2 Gym Management System"
+      "shortDescription": "Offline encrypted gym management application"
     }
   }
 }
